@@ -4,7 +4,7 @@ project(rcppm2ros)
 find_package(catkin REQUIRED COMPONENTS
   message_generation
   rosserial_arduino
-  rosserial_server
+  rosserial_python
 )
 
 ################################################
@@ -46,6 +46,7 @@ include_directories(
 add_custom_target(rcppm2ros)
 add_dependencies(rcppm2ros
   rcppm2ros_generate_messages_cpp
+  rcppm2ros_generate_messages_python
 )
 
 #############

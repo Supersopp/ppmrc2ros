@@ -1,5 +1,6 @@
 <launch>
-  <node pkg="rosserial_server" type="serial_node" name="rcppm2ros_client">
-    <param name="port" value="/dev/ttyACM0" />
+  <arg name="port" default="/dev/ttyACM0" />
+  <node pkg="rosserial_python" type="serial_node.py" args="$(arg port)" name="rcppm2ros">
+    
   </node>
 </launch>
