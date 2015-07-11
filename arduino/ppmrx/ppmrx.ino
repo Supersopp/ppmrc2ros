@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define USE_USBCON
 
 #include <ros.h>
-#include <rcppm2ros/rcppm.h>
+#include <rcppm2ros/rc_input.h>
 #include <stdint.h>
 
 // Pins on port B
@@ -39,6 +39,7 @@ const uint8_t     rxPinCount = 4;
 volatile uint16_t rxPulseLength[rxPinCount];
 uint8_t           rxChannelRecived;
 uint8_t           rxChannelActive;
+volatile uint16_t edgeToEdgeTime[rxPinCount];
 
 // Setup funcion for pin change interrupt on rx pins.
 void configureRX()
@@ -83,6 +84,7 @@ ISR(PCINT0_vect)
       }
       // Falling edge?
       else{
+        edgeToEdgeTime[channel] = currentTime - risingEdgeTime[channel];
         risingEdgeTime[channel] = currentTime;
       }
     }
@@ -91,45 +93,66 @@ ISR(PCINT0_vect)
 
 // Declare ROS node, message and publisher.
 ros::NodeHandle node;
-rcppm2ros::rcppm rcppm_msg;
-ros::Publisher rcppm_publisher("rc_input", &rcppm_msg);
+rcppm2ros::rc_input rc_msg;
+ros::Publisher rc_publisher("rc_input", &rc_msg);
 
 void setup(void)
 {
   // Initialize ROS node.
   node.initNode();
   
-  // Advertise rcppm messages.
-  node.advertise(rcppm_publisher);
+  // Advertise rc_input messages.
+  node.advertise(rc_publisher);
 
   // Configure receiver interrupt.
   configureRX();
   sei();
 
   // Wait for connection.
-  while(!node.connected()){
+  do{
     node.spinOnce();
-  }
+  }while(!node.connected());
 }
 
 void loop(void)
 {
-  uint16_t rxChannel[rxPinCount];
+  uint16_t rxPulse[rxPinCount];
+  bool     rxValid[rxPinCount];
+  float    rxValue[rxPinCount];
+  uint8_t  rxRate[rxPinCount];
 
+  // Only publish when all channels have new data
   if(rxChannelRecived == rxChannelActive){
     rxChannelRecived = 0;
-
-    // Copy data.
+  
+    // Copy and calculate values
     for( uint8_t channel = 0; channel < rxPinCount; channel++ ){
-      rxChannel[channel] = rxPulseLength[channel];
+      rxPulse[channel] = rxPulseLength[channel];
+      if(900 < rxPulse[channel] && rxPulse[channel] < 2100){
+        rxValid[channel] = true;
+        rxValue[channel] = ((int)rxPulse[channel] - 1500)/5;
+      }
+      else{
+        rxValid[channel] = false;
+        rxValue[channel] = 0.0;
+      }
+      rxRate[channel] = 1e6/edgeToEdgeTime[channel];
     }
 
     // Build and publish message.
-    rcppm_msg.channel        = rxChannel;
-    rcppm_msg.channel_length = rxPinCount;
-    rcppm_publisher.publish(&rcppm_msg);
-  }
+    rc_msg.pulse_length = rxPulse;
+    rc_msg.valid_pulse  = rxValid;
+    rc_msg.value        = rxValue;
+    rc_msg.rate         = rxRate;
 
+    rc_msg.pulse_length_length = rxPinCount;
+    rc_msg.valid_pulse_length  = rxPinCount;
+    rc_msg.value_length        = rxPinCount;
+    rc_msg.rate_length         = rxPinCount;
+
+    rc_publisher.publish(&rc_msg);
+  }
+  
   // Spin ROS.
   node.spinOnce();
 }
