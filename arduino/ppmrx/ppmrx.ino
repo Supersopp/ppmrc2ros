@@ -28,13 +28,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define D8  (1<<4)
 #define D9  (1<<5)
 #define D10 (1<<6)
-#define D11 (1<<7)
+#define D11 (1<<7) // Not exposed on Sparkfun Pro Micro
 #define D14 (1<<3)
 #define D15 (1<<1)
 #define D16 (1<<2)
-#define D17 (1<<0)
+#define D17 (1<<0)  // Not exposed on Sparkfun Pro Micro
 
-const uint16_t    timeoutLimit = 44; //ms
+int               frameTimeout = 30; //ms
 const int8_t      rxPins[]     = {D10,D14,D15,D16};
 const uint8_t     rxPinCount   = 4;
 volatile uint16_t rxPulseLength[rxPinCount];
@@ -113,6 +113,8 @@ void setup(void)
   do{
     node.spinOnce();
   }while(!node.connected());
+
+  node.getParam("~frame_timeout", &frameTimeout);
 }
 
 void loop(void)
@@ -127,7 +129,7 @@ void loop(void)
     rxChannelRecived = 0;
 
     // Store deadline for next message.
-    messageDeadline =  millis() + timeoutLimit;
+    messageDeadline =  millis() + frameTimeout;
 
     uint16_t rxPulse[rxPinCount];
     bool     rxValid[rxPinCount];
