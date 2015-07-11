@@ -17,6 +17,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+// Use USB serial port
+#define USE_USBCON
+
 #include <ros.h>
 #include <rcppm2ros/rcppm.h>
 #include <stdint.h>
@@ -31,7 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define D16     1<<2
 #define D17     1<<0
 
-uint8_t           rxPins[]   = {D10,D14,D15,D16};
+const int8_t      rxPins[]   = {D10,D14,D15,D16};
 const uint8_t     rxPinCount = 4;
 volatile uint16_t rxPulseLength[rxPinCount];
 
@@ -51,7 +54,6 @@ ISR(PCINT0_vect)
 {
   static uint16_t risingEdgeTime[rxPinCount];
   uint16_t        currentTime;
-  uint16_t        pulseLength;
   uint8_t         port;
   static uint8_t  portLast;
   uint8_t         portChange;
@@ -86,7 +88,7 @@ ISR(PCINT0_vect)
 // Declare ROS node, message and publisher.
 ros::NodeHandle node;
 rcppm2ros::rcppm rcppm_msg;
-ros::Publisher rcppm_publisher("rcppm", &rcppm_msg, 10);
+ros::Publisher rcppm_publisher("rc_input", &rcppm_msg, 10);
 
 void setup(void)
 {
@@ -97,21 +99,25 @@ void setup(void)
   // Initialize ROS node.
   node.initNode();
   
+  // Advertise rcppm messages.
+  node.advertise(rcppm_publisher);
+
   // Wait for connection.
   while(!node.connected()){
     node.spinOnce();
   }
-  
-  // Advertise rcppm messages.
-  node.advertise(rcppm_publisher);
 }
 
 void loop(void)
 {
-  // Build and publish message.
+  uint16_t rxChannel[rxPinCount];
+  
   for( uint8_t channel = 0; channel < rxPinCount; channel++ ){
-    rcppm_msg.channel[channel] = rxPulseLength[channel];
+    rxChannel[channel] = rxPulseLength[channel];
   }
+
+  // Build and publish message.
+  rcppm_msg.channel        = rxChannel;
   rcppm_msg.channel_length = rxPinCount;
   rcppm_publisher.publish(&rcppm_msg);
   
