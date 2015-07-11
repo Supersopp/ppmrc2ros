@@ -25,18 +25,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdint.h>
 
 // Pins on port B
-#define D8      1<<4
-#define D9      1<<5
-#define D10     1<<6
-#define D11     1<<7
-#define D14     1<<3
-#define D15     1<<1
-#define D16     1<<2
-#define D17     1<<0
+#define D8  (1<<4)
+#define D9  (1<<5)
+#define D10 (1<<6)
+#define D11 (1<<7)
+#define D14 (1<<3)
+#define D15 (1<<1)
+#define D16 (1<<2)
+#define D17 (1<<0)
 
 const int8_t      rxPins[]   = {D10,D14,D15,D16};
 const uint8_t     rxPinCount = 4;
 volatile uint16_t rxPulseLength[rxPinCount];
+uint8_t           rxChannelRecived;
+uint8_t           rxChannelActive;
 
 // Setup funcion for pin change interrupt on rx pins.
 void configureRX()
@@ -45,6 +47,7 @@ void configureRX()
     DDRB   &= ~rxPins[channel]; // Set pin as input.
     PORTB  |=  rxPins[channel]; // Enable pullup on pin.
     PCMSK0 |=  rxPins[channel]; // Mask pin for port change interrupt.
+    rxChannelActive |= (1<<channel); // Mark channel as active.
   }
   PCICR |= (1<<PCIE0); // Enable port change interrupt.
 }
@@ -76,6 +79,7 @@ ISR(PCINT0_vect)
       // Rising edge?
       if( !(port & rxPins[channel]) ){
         rxPulseLength[channel] = currentTime - risingEdgeTime[channel];
+	rxChannelRecived |= (1<<channel);
       }
       // Falling edge?
       else{
@@ -88,19 +92,19 @@ ISR(PCINT0_vect)
 // Declare ROS node, message and publisher.
 ros::NodeHandle node;
 rcppm2ros::rcppm rcppm_msg;
-ros::Publisher rcppm_publisher("rc_input", &rcppm_msg, 10);
+ros::Publisher rcppm_publisher("rc_input", &rcppm_msg);
 
 void setup(void)
 {
-  // Configure receiver interrupt.
-  configureRX();
-  sei();
-  
   // Initialize ROS node.
   node.initNode();
   
   // Advertise rcppm messages.
   node.advertise(rcppm_publisher);
+
+  // Configure receiver interrupt.
+  configureRX();
+  sei();
 
   // Wait for connection.
   while(!node.connected()){
@@ -111,16 +115,21 @@ void setup(void)
 void loop(void)
 {
   uint16_t rxChannel[rxPinCount];
-  
-  for( uint8_t channel = 0; channel < rxPinCount; channel++ ){
-    rxChannel[channel] = rxPulseLength[channel];
+
+  if(rxChannelRecived == rxChannelActive){
+    rxChannelRecived = 0;
+
+    // Copy data.
+    for( uint8_t channel = 0; channel < rxPinCount; channel++ ){
+      rxChannel[channel] = rxPulseLength[channel];
+    }
+
+    // Build and publish message.
+    rcppm_msg.channel        = rxChannel;
+    rcppm_msg.channel_length = rxPinCount;
+    rcppm_publisher.publish(&rcppm_msg);
   }
 
-  // Build and publish message.
-  rcppm_msg.channel        = rxChannel;
-  rcppm_msg.channel_length = rxPinCount;
-  rcppm_publisher.publish(&rcppm_msg);
-  
   // Spin ROS.
   node.spinOnce();
 }
