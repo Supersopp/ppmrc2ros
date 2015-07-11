@@ -34,8 +34,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define D16 (1<<2)
 #define D17 (1<<0)
 
-const int8_t      rxPins[]   = {D10,D14,D15,D16};
-const uint8_t     rxPinCount = 4;
+const uint16_t    timeoutLimit = 44; //ms
+const int8_t      rxPins[]     = {D10,D14,D15,D16};
+const uint8_t     rxPinCount   = 4;
 volatile uint16_t rxPulseLength[rxPinCount];
 uint8_t           rxChannelRecived;
 uint8_t           rxChannelActive;
@@ -116,27 +117,43 @@ void setup(void)
 
 void loop(void)
 {
-  uint16_t rxPulse[rxPinCount];
-  bool     rxValid[rxPinCount];
-  float    rxValue[rxPinCount];
-  uint8_t  rxRate[rxPinCount];
+  static uint32_t messageDeadline;
 
-  // Only publish when all channels have new data
-  if(rxChannelRecived == rxChannelActive){
+  // Only publish when all channels have new data or after timeout
+  if( (rxChannelRecived == rxChannelActive) || (messageDeadline < millis()) ){
+
+    // Store value and clear rxChannelRecived.
+    uint8_t recivedChannels = rxChannelRecived;
     rxChannelRecived = 0;
+
+    // Store deadline for next message.
+    messageDeadline =  millis() + timeoutLimit;
+
+    uint16_t rxPulse[rxPinCount];
+    bool     rxValid[rxPinCount];
+    float    rxValue[rxPinCount];
+    uint8_t  rxRate[rxPinCount];
   
     // Copy and calculate values
     for( uint8_t channel = 0; channel < rxPinCount; channel++ ){
-      rxPulse[channel] = rxPulseLength[channel];
-      if(900 < rxPulse[channel] && rxPulse[channel] < 2100){
-        rxValid[channel] = true;
-        rxValue[channel] = ((int)rxPulse[channel] - 1500)/5;
+      // Was a pulse recived on the channel?
+      if( !(recivedChannels & (1<<channel)) ){
+        rxValid[channel] = false;
+	rxValue[channel] = 0.0;
       }
       else{
-        rxValid[channel] = false;
-        rxValue[channel] = 0.0;
+        rxRate[channel] = 1e6/edgeToEdgeTime[channel];
+        rxPulse[channel] = rxPulseLength[channel];
+        // Valid pulse?
+        if(900 < rxPulse[channel] && rxPulse[channel] < 2100){
+          rxValid[channel] = true;
+          rxValue[channel] = ((int)rxPulse[channel] - 1500)/4;
+        }
+        else{
+          rxValid[channel] = false;
+          rxValue[channel] = 0.0;
+        }
       }
-      rxRate[channel] = 1e6/edgeToEdgeTime[channel];
     }
 
     // Build and publish message.
