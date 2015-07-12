@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(rcppm2ros)
+project(rosrx)
 
 find_package(catkin REQUIRED COMPONENTS
   message_generation
@@ -43,10 +43,10 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_custom_target(rcppm2ros)
-add_dependencies(rcppm2ros
-  rcppm2ros_generate_messages_cpp
-  rcppm2ros_generate_messages_python
+add_custom_target(rosrx)
+add_dependencies(rosrx
+  rosrx_generate_messages_cpp
+  rosrx_generate_messages_python
 )
 
 #############
@@ -54,6 +54,6 @@ add_dependencies(rcppm2ros
 #############
 
 install(FILES
-  launch/rcppm2ros.launch
+  launch/rosrx.launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
 )

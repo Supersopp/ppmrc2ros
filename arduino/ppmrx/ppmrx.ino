@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define USE_USBCON
 
 #include <ros.h>
-#include <rcppm2ros/rc_input.h>
+#include <rosrx/rc_input.h>
 #include <stdint.h>
 
 // Pins on port B
@@ -94,7 +94,7 @@ ISR(PCINT0_vect)
 
 // Declare ROS node, message and publisher.
 ros::NodeHandle node;
-rcppm2ros::rc_input rc_msg;
+rosrx::rc_input rc_msg;
 ros::Publisher rc_publisher("rc_input", &rc_msg);
 
 void setup(void)

@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <package>
   <!-- Package info /-->
-  <name>rcppm2ros</name>
+  <name>rosrx</name>
   <version>0.2.0</version>
   <description>ROS package for reading parallel PPM data from an rc reciver. Uses an arduino sketch for a Sparkfun Pro Micro with rosserial_arduino.</description>
   <maintainer email="permagnus@gmail.com">Per Magnus Auby</maintainer>
   <author email="permagnus@gmail.com">Per Magnus Auby</author>
   <license>GPLv3</license>
-  <url type="Repository">http://github.com/Supersopp/rcppm2ros</url> -->
+  <url type="Repository">http://github.com/Supersopp/rosrx</url> -->
 
   <!-- Dependencies /--> 
   <buildtool_depend>catkin</buildtool_depend>

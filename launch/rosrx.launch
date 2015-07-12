@@ -1,6 +1,6 @@
 <launch>
   <arg name="port" default="/dev/ttyACM0" />
-  <node pkg="rosserial_python" type="serial_node.py" args="$(arg port)" name="rcppm2ros">
+  <node pkg="rosserial_python" type="serial_node.py" args="$(arg port)" name="rosrx">
 	<param name="frame_timeout" type="int" value="30" />
   </node>
 </launch>

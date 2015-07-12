@@ -1,4 +1,4 @@
-# rcppm2ros
+# rosrx
 ROS package for reading parallel ppm signals from a RC receiver using a Sparkfun Pro Micro.
 The Pro Micro runs a Arduino sketch that uses rosserial_arduino to publish messages with the pulse lengths.
 The included launch file launches a rosserial_python/serial_node to relay the messages to the rest of ROS.
